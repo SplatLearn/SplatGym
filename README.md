@@ -15,6 +15,9 @@ First, install dependencies:
 > pip install -r src/requirements.txt
 ```
 
+Refer to [collision_detector](https://github.com/SplatLearn/collision_detector) to build the collision detector for your architecture.
+Copy the artifacts to `src/nerfgym/pybind_collision_detector.cpython-<version>-<arch>-<os>.so`
+
 To use the gym environment, a scene must be trained using nerfstudio
 
 ```sh
