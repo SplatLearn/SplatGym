@@ -1,6 +1,22 @@
-# Splat Gym
+<p align="center">
+    <h1 style="text-align:center">SplatGym</h1>
+</p>
 
-Splat gym is a simulator for reinforcement learning free space navigation policies in Gaussian splat environments.
+<p align="center">
+  Open Source Neural Simulator for Robot Learning.
+</p>
+
+<p align="center">
+  <br />
+    <picture>
+      <img src="docs/figures/logo.jpeg" width="200px">
+    </picture>
+  </a>
+</p>
+
+## Introduction
+
+SplatGym is a simulator for reinforcement learning free space navigation policies in Gaussian splat environments.
 
 It has the following main features:
 
