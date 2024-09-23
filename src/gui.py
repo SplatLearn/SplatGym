@@ -1,7 +1,9 @@
 #! /usr/bin/env python3
 
 import time
+from pathlib import Path
 
+import fire
 import numpy as np
 import viser
 import viser.transforms as tf
@@ -30,7 +32,13 @@ def get_w2c(camera):
 
 
 class ViserGUI:
-    def __init__(self):
+    def __init__(
+        self,
+        config_path: Path = Path(
+            "outputs/garden_objects/splatfacto/2024-07-24_185403/config.yml"
+        ),
+        pcd_path: Path = Path("data/garden_objects/point_cloud.pcd"),
+    ):
         self.server = viser.ViserServer()
         self.server.configure_theme(dark_mode=True)
 
@@ -58,10 +66,18 @@ class ViserGUI:
             disabled=True,
             hint="Camera pose",
         )
+        self.reward_text = self.server.add_gui_text(
+            label="Reward",
+            initial_value="0",
+            disabled=True,
+            hint="Reward",
+        )
         self.reset_button = self.server.add_gui_button("Reset Env")
         self.reset_button.on_click(self.reset_env)
 
-        self.env = make_single_env("fps", 1)
+        self.env = make_single_env(
+            "snake", 1, config_path=config_path, pcd_path=pcd_path
+        )
 
         self.fwd_button = self.server.add_gui_button("forward")
         self.bwd_button = self.server.add_gui_button("backward")
@@ -73,27 +89,36 @@ class ViserGUI:
         self.left_button.on_click(lambda _: self.navigate("Left"))
         self.right_button.on_click(lambda _: self.navigate("Right"))
 
+        self.speed_slider = self.server.add_gui_slider(
+            label="Speed", min=1, max=10, step=1, initial_value=3
+        )
+
         self.need_update = True
 
         self.snake_button = self.server.add_gui_checkbox("Snake", initial_value=False)
         self.snake_button.on_update(self.toggle_snake)
         self.snake_step_time = 0
 
+        self.reward = 0
+
     def toggle_snake(self, _):
         pass
 
     def navigate(self, move):
+        action = -1
         if move == "Forward":
-            self.env.step(0)
+            action = 0
         elif move == "Backward":
-            self.env.step(1)
+            action = 1
         elif move == "Left":
-            self.env.step(2)
+            action = 2
         elif move == "Right":
-            self.env.step(3)
+            action = 3
+
+        img, reward, terminated, truncated, info = self.env.step(action)
+        self.reward += reward
 
     def reset_env(self, _):
-        self.env.steps_away_from_goal = 20
         self.env.reset()
         self.need_update = True
         x, y, z, roll, pitch, yaw = self.env.vc.xyzrpy()
@@ -132,15 +157,26 @@ class ViserGUI:
                 self.pose_text.value = f"{rot[0]:.2f}, {rot[1]:.2f}, {rot[2]:.2f}"
 
                 now = time.time()
-                if self.snake_button.value and now - self.snake_step_time > 0.5:
+                if (
+                    self.snake_button.value
+                    and now - self.snake_step_time > 1 / self.speed_slider.value
+                ):
                     self.snake_step_time = now
-                    self.env.step(0)
+                    img, reward, terminated, truncated, info = self.env.step(0)
+                    self.reward += reward
+
+                self.reward_text.value = f"{self.reward:.2f}"
 
         return
 
 
-def main():
-    gui = ViserGUI()
+def main(
+    config_path: Path = Path(
+        "outputs/garden_objects/splatfacto/2024-07-24_185403/config.yml"
+    ),
+    pcd_path: Path = Path("data/garden_objects/point_cloud.pcd"),
+):
+    gui = ViserGUI(config_path=config_path, pcd_path=pcd_path)
 
     while True:
         gui.update()
@@ -155,4 +191,4 @@ def play_tic_tac_toe(server: viser.ViserServer) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    fire.Fire(main)

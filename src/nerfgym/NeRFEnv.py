@@ -21,6 +21,7 @@ class NeRFBaseEnv(gym.Env):
         min_bound=[-14, -8, -0.6],
         max_bound=[20, 8, 5],
         bbox_sides=4,
+        camera_box_size=[0.4, 0.4, 0.1],
     ):
         self.vc = VirtualCamera(config_path)
         self.observation_space = gym.spaces.Box(
@@ -46,6 +47,9 @@ class NeRFBaseEnv(gym.Env):
             opt.y_min = -bbox_sides / 2 + point[1]
             opt.z_max = bbox_sides / 2 + point[2]
             opt.z_min = -bbox_sides / 2 + point[2]
+            opt.camera_box_size_x = camera_box_size[0]
+            opt.camera_box_size_y = camera_box_size[1]
+            opt.camera_box_size_z = camera_box_size[2]
 
             c = CollisionDetector(str(pcd_path), opt)
             self.collision_detectors.append(c)
@@ -146,6 +150,10 @@ class NeRFEnv(NeRFBaseEnv):
                     reset_xyzrpy[-1] -= self.ANGLE_STEP
                 else:
                     raise ValueError("Invalid action")
+
+        if self.steps_away_from_goal >= self.STEPS_AWAY_FROM_GOAL_MAX:
+            reset_xyzrpy[0] = np.random.uniform(self.X_MIN, self.X_MAX)
+            reset_xyzrpy[1] = np.random.uniform(self.Y_MIN, self.Y_MAX)
 
         reset_xyzrpy[0] = np.clip(reset_xyzrpy[0], self.X_MIN, self.X_MAX)
         reset_xyzrpy[1] = np.clip(reset_xyzrpy[1], self.Y_MIN, self.Y_MAX)
@@ -284,11 +292,11 @@ class NeRFEnv(NeRFBaseEnv):
 
 class NeRFFPSEnv(NeRFEnv):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, camera_box_size=[0.01] * 3, **kwargs)
         self.action_space = gym.spaces.Discrete(4)
         self.TRANSLATE_STEP = 0.1
         self.ANGLE_STEP = 10
-        self.RANDOM_PHASE_STEPS_MAX = 15
+        self.RANDOM_PHASE_STEPS_MAX = 18
         self.RANDOM_PHASE_ANGLES_MAX = 18
         self.STEPS_AWAY_FROM_GOAL_MAX = 26
 
@@ -326,6 +334,9 @@ class NeRFAppleEnv(NeRFFPSEnv):
         self.apple = np.clip(self.apple.astype(np.float32) / 255, 0, 1)
         self.apple = cv2.resize(self.apple, (100, 100))
         self.apple = cv2.cvtColor(self.apple, cv2.COLOR_BGR2RGB)
+        self.apple_alpha = (
+            np.linalg.norm(self.apple - self.apple[0, 0], axis=2) > 0.2
+        ).astype(np.float32)
 
         cameras = self.vc.train_cameras
         fx = cameras.fx[0].to("cpu").numpy()[0]
@@ -457,7 +468,12 @@ class NeRFAppleEnv(NeRFFPSEnv):
             apple_edge = d_point[0][1][0] / scale
             apple_radius = int(np.linalg.norm((apple_edge - apple_centre)))
 
+            if apple_radius > 3000:
+                return img
+
+            # print("apple_centre", apple_centre)
             apple_centre = np.round(apple_centre).astype(int)
+            # print("apple_centre", apple_centre)
             apple_centre[0] = img.shape[1] - apple_centre[0]
             apple_centre[1] = img.shape[0] - apple_centre[1]
 
@@ -466,37 +482,163 @@ class NeRFAppleEnv(NeRFFPSEnv):
             max_x = apple_centre[0] + apple_radius
             max_y = apple_centre[1] + apple_radius
 
-            apple_x_start = max(0, -min_x)
-            apple_y_start = max(0, -min_y)
+            # coordinates in the apple image
+            apple_min_x = max(0, -min_x)
+            apple_min_y = max(0, -min_y)
+            apple_max_x = apple_min_x + min(img.shape[1], max_x)
+            apple_max_y = apple_min_y + min(img.shape[0], max_y)
 
+            # coordinates in the original apple image
+            apple_scale = apple_radius * 2 / self.apple.shape[1]
+            orig_apple_min_x = max(0, int(apple_min_x / apple_scale))
+            orig_apple_min_y = max(0, int(apple_min_y / apple_scale))
+            orig_apple_max_x = min(self.apple.shape[1], int(apple_max_x / apple_scale))
+            orig_apple_max_y = min(self.apple.shape[0], int(apple_max_y / apple_scale))
+
+            # coordinates in the final image
             min_x = max(0, min_x)
             min_y = max(0, min_y)
             max_x = min(img.shape[1], max_x)
             max_y = min(img.shape[0], max_y)
 
-            # print(points, d_point[0])
-            # print(apple_centre, apple_radius, min_x, min_y, max_x, max_y, img.shape)
-
-            if apple_radius > 0:
-                apple_scale = apple_radius * 2 / self.apple.shape[1]
-                # print(apple_scale, apple_copy.shape)
-                for x in range(min_x, max_x):
-                    for y in range(min_y, max_y):
-                        apple_x = x - min_x + apple_x_start
-                        apple_y = y - min_y + apple_y_start
-
-                        orig_apple_x = int(apple_x / apple_scale)
-                        orig_apple_y = int(apple_y / apple_scale)
-
-                        color = self.apple[orig_apple_y, orig_apple_x]
-
-                        if np.linalg.norm(color - self.apple[0, 0]) > 0.2:
-                            img[y, x] = color
+            if apple_radius > 0 and min_y < max_y and min_x < max_x:
+                img_patch = img[min_y:max_y, min_x:max_x]
+                # print("img_patch.shape[:2]", img_patch.shape[:2])
+                apple_patch = self.apple[
+                    orig_apple_min_y:orig_apple_max_y, orig_apple_min_x:orig_apple_max_x
+                ]
+                apple_patch_alpha = self.apple_alpha[
+                    orig_apple_min_y:orig_apple_max_y, orig_apple_min_x:orig_apple_max_x
+                ]
+                # print("apple_patch.shape[:2]", apple_patch.shape[:2])
+                # print("apple_centre", apple_centre)
+                # print("apple_radius", apple_radius)
+                # print("min_x, min_y, max_x, max_y", min_x, min_y, max_x, max_y)
+                # print("apple_min_x, apple_min_y, apple_max_x, apple_max_y", apple_min_x, apple_min_y, apple_max_x, apple_max_y)
+                # print("orig coords", orig_apple_min_x, orig_apple_min_y, orig_apple_max_x, orig_apple_max_y)
+                apple_patch_resized = cv2.resize(
+                    apple_patch, (img_patch.shape[1], img_patch.shape[0])
+                )
+                apple_patch_alpha_resized = cv2.resize(
+                    apple_patch_alpha, (img_patch.shape[1], img_patch.shape[0])
+                ).astype(np.float64)[:, :, np.newaxis]
+                img_patch_alpha = 1 - apple_patch_alpha_resized
+                blended_patch = (
+                    img_patch * img_patch_alpha
+                    + apple_patch_resized * apple_patch_alpha_resized
+                )
+                img[min_y:max_y, min_x:max_x] = blended_patch
 
         return img
 
     def render(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
         return self.render_apple_in_scene(super().render(seed=seed, options=options))
+
+
+class NeRFSnakeEnv(NeRFAppleEnv):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, camera_box_size=[0.2] * 3, **kwargs)
+        self.X_MAX = 100
+        self.Y_MAX = 100
+        self.X_MIN = -100
+        self.Y_MIN = -100
+        self.reset_apple_loc()
+        self.steps_away_from_goal = 3
+        self.COLLISION_DETECTION = True
+        self.goal_xyzrpy = [
+            -0.8,
+            0,
+            0,
+            90,
+            0.0,
+            -90,
+        ]
+
+    def reset_apple_loc(self):
+        x = np.random.uniform(-0.8, -3)
+        y = np.random.uniform(-2, 2)
+        self.apple_position = np.array([x, y, 0])
+
+        if self.detect_collision(
+            self.apple_position[0],
+            self.apple_position[1],
+            self.apple_position[2],
+            0,
+            0,
+            0,
+        ):
+            return self.reset_apple_loc()
+
+    def step(self, action):
+        self.step_count += 1
+
+        self.move_vc(action)
+        img = self.vc.view()
+        try:
+            img = self.render_apple_in_scene(img)
+        except Exception as e:
+            with open("error.log", "a") as f:
+                f.write(str(e) + "\n")
+            print(e)
+        average_red = np.sum(img[:, :, 0]) / (img.shape[0] * img.shape[1])
+
+        x, y, z, roll, pitch, yaw = self.vc.xyzrpy()
+
+        if (
+            np.linalg.norm(np.array([x, y, z]) - self.apple_position)
+            < self.TRANSLATE_STEP * 1.1
+        ) and (average_red > 0.55):
+            self.reached_goal_count += 1
+
+            if self.reached_goal_count >= self.REACHED_GOAL_COUNT_THRESHOLD:
+                self.steps_away_from_goal += 1
+                if self.steps_away_from_goal > self.STEPS_AWAY_FROM_GOAL_MAX:
+                    self.steps_away_from_goal = self.STEPS_AWAY_FROM_GOAL_MAX
+                self.reached_goal_count = 0
+
+            reward = self.GOAL_REWARD
+            terminated = False
+            self.reset_apple_loc()
+        else:
+            # negative reward for each step to discourage unnecessary movement
+            reward = self.STEP_PENALTY
+            terminated = False
+
+        while self.detect_collision(x, y, z, roll, pitch, yaw):
+            # large penalty for collision
+            reward = self.COLLISION_PENALTY
+            terminated = False
+            reverse_action = 0
+            if action == 0:
+                reverse_action = 1
+            elif action == 1:
+                reverse_action = 0
+            elif action == 2:
+                reverse_action = 3
+            elif action == 3:
+                reverse_action = 2
+            self.move_vc(reverse_action)
+            self.move_vc(reverse_action)
+            x, y, z, roll, pitch, yaw = self.vc.xyzrpy()
+
+        self.trajectory.append((x, y, z, roll, pitch, yaw))
+
+        info = {
+            "angle": 0,
+            "action": action,
+            "steps_away_from_goal": self.steps_away_from_goal,
+            "reached_goal_count": self.reached_goal_count,
+            "trajectory": self.trajectory,
+        }
+
+        truncated = False
+        return (
+            img,
+            reward,
+            terminated,
+            truncated,
+            info,
+        )
 
 
 class NeRFHemisphereEnv(NeRFBaseEnv):

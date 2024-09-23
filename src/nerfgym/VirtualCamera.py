@@ -15,8 +15,9 @@ class VirtualCamera:
             for line in f:
                 if "num_rays_per_chunk" in line:
                     eval_num_rays_per_chunk = int(line.split(":")[-1].strip())
+
         _, pipeline, _, _ = eval_setup(
-            config_path,
+            Path(config_path),
             eval_num_rays_per_chunk=eval_num_rays_per_chunk,
             test_mode="inference",
         )
@@ -51,14 +52,15 @@ class VirtualCamera:
     def view(self, resolution=(64, 64)):
         pose = Tensor(np.array([self.pose[:3, :]]))
         idx = 0
+        scale_factor = 8
         new_camera = Cameras(
             camera_to_worlds=pose,
-            fx=self.train_cameras.fx[idx : idx + 1],
-            fy=self.train_cameras.fy[idx : idx + 1],
-            cx=self.train_cameras.cx[idx : idx + 1],
-            cy=self.train_cameras.cy[idx : idx + 1],
-            width=self.train_cameras.width[idx : idx + 1],
-            height=self.train_cameras.height[idx : idx + 1],
+            fx=self.train_cameras.fx[idx : idx + 1] / scale_factor,
+            fy=self.train_cameras.fy[idx : idx + 1] / scale_factor,
+            cx=self.train_cameras.cx[idx : idx + 1] / scale_factor,
+            cy=self.train_cameras.cy[idx : idx + 1] / scale_factor,
+            width=self.train_cameras.width[idx : idx + 1] // scale_factor,
+            height=self.train_cameras.height[idx : idx + 1] // scale_factor,
             distortion_params=self.train_cameras.distortion_params[idx : idx + 1],
             camera_type=self.train_cameras.camera_type[idx : idx + 1],
         )
