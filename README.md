@@ -16,12 +16,30 @@
 
 ## Introduction
 
+<p align="left">
+  <br />
+    <picture>
+      <img src="docs/figures/splatgym_simulator_overview.drawio.png" width="600px">
+    </picture>
+  </a>
+</p>
+
 SplatGym is a simulator for reinforcement learning free space navigation policies in Gaussian splat environments.
 
 It has the following main features:
 
 - Novel View Synthesis - Generate photo-realistic images of the scene from any arbitrary camera pose.
 - Collision Detection - Detect collision between the camera and the underlying scene objects.
+
+### Software Stack
+
+<p align="left">
+  <br />
+    <picture>
+      <img src="docs/figures/software_stack.drawio.png" width="600px">
+    </picture>
+  </a>
+</p>
 
 ## Usage
 
