@@ -41,26 +41,58 @@ It has the following main features:
   </a>
 </p>
 
-## Usage
+## Installation
 
-First, install dependencies:
+### Docker Container
 
-```sh
+To run a pre-built image:
+
+```bash
+docker run --gpus all \
+            -u $(id -u):$(id -u) \
+            -v /folder/of/your/data:/workspace/ \
+            -v /home/$USER/.cache/:/home/user/.cache/ \
+            -p 7007:7007 \
+            --rm \
+            -it \
+            --shm-size=12gb \
+            docker.io/liyouzhou/splat_gym:latest
+```
+
+To build image from scratch, run the following command at the root of this repository:
+
+```bash
+docker build .
+```
+
+### Native Installation
+
+First, install nerfstudio and its dependencies by following this [guide](https://docs.nerf.studio/quickstart/installation.html). This project uses nerfstudio `1.1.3`. Then run the following command:
+
+```bash
+> sudo apt-get install swig
 > pip install -r src/requirements.txt
 ```
 
-Refer to [collision_detector](https://github.com/SplatLearn/collision_detector) to build the collision detector for your architecture.
-Copy the artifacts to `src/nerfgym/pybind_collision_detector.cpython-<version>-<arch>-<os>.so`
+Refer to [collision_detector](https://github.com/SplatLearn/collision_detector) to build the collision detector for your architecture. In your build folder, your should now have a `pybind_collision_detector.cpython-<version>-<arch>-<os>.so` file.
+
+Now set PYTHONPATH to allow python to find all splat gym modules
+
+```bash
+> export PYTHONPATH="<path to collision_detector>/build:<path to SplatGym>/src":$PYTHONPATH
+```
+
+## Usage
 
 To use the gym environment, a scene must be trained using nerfstudio
 
-```sh
+```bash
 > ns-train splatfacto --data <data_folder>
 ```
 
 Point cloud must be obtained for the scene
 
-```sh
+```bash
 > ns-train nerfacto --data <data_folder> --pipeline.model.predict-normals=True
 > ns-export pointcloud --load-config <nerfacto config> --output-dir <output_dir> 
 ```
@@ -80,5 +112,5 @@ The environment follows the [Gymnasium Env API](https://gymnasium.farama.org/api
 A training script has been written to use PPO to solve the free space navigation problem. This can be invoked:
 
 ```sh
-> PYTHONPATH=<repo_dir>/src  python3 src/training.py train --num_training_steps 300000 --env_id free
+> python3 src/training.py train --num_training_steps 300000 --env_id free
 ```
