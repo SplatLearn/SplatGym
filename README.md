@@ -114,3 +114,21 @@ A training script has been written to use PPO to solve the free space navigation
 ```sh
 > python3 src/training.py train --num_training_steps 300000 --env_id free
 ```
+
+## Citation
+
+You can find a paper writeup of the framework on [arXiv](https://arxiv.org/abs/2410.19564).
+
+If you use this library or find the documentation useful for your research, please consider citing:
+
+```
+@misc{zhou2024roboticlearningbackyardneural,
+      title={Robotic Learning in your Backyard: A Neural Simulator from Open Source Components}, 
+      author={Liyou Zhou and Oleg Sinavski and Athanasios Polydoros},
+      year={2024},
+      eprint={2410.19564},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO},
+      url={https://arxiv.org/abs/2410.19564}, 
+}
+```
