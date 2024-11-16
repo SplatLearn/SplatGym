@@ -52,7 +52,7 @@ class VirtualCamera:
     def view(self, resolution=(64, 64)):
         pose = Tensor(np.array([self.pose[:3, :]]))
         idx = 0
-        scale_factor = 8
+        scale_factor = 4
         new_camera = Cameras(
             camera_to_worlds=pose,
             fx=self.train_cameras.fx[idx : idx + 1] / scale_factor,

@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 import cv2
+import copy
 import gymnasium as gym
 import numpy as np
 import open3d as o3d
@@ -112,7 +113,7 @@ class NeRFEnv(NeRFBaseEnv):
 
     def reset(self, seed: Optional[int] = None) -> Tuple[Any, Dict[str, Any]]:
         self.step_count = 0
-        reset_xyzrpy = self.goal_xyzrpy.copy()
+        reset_xyzrpy = copy.deepcopy(self.goal_xyzrpy)
 
         actions = [
             np.random.choice([0, 1]),
@@ -291,8 +292,8 @@ class NeRFEnv(NeRFBaseEnv):
 
 
 class NeRFFPSEnv(NeRFEnv):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, camera_box_size=[0.01] * 3, **kwargs)
+    def __init__(self, *args, camera_box_size=[0.01] * 3, **kwargs):
+        super().__init__(*args, camera_box_size=camera_box_size, **kwargs)
         self.action_space = gym.spaces.Discrete(4)
         self.TRANSLATE_STEP = 0.1
         self.ANGLE_STEP = 10
