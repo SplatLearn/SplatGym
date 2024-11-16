@@ -84,6 +84,8 @@ Now set PYTHONPATH to allow python to find all splat gym modules
 
 ## Usage
 
+Refer to [examples/poster_env](examples/poster_env) for an end-to-end example using demo data.
+
 To use the gym environment, a scene must be trained using nerfstudio
 
 ```bash
