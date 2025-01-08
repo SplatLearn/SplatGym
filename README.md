@@ -56,7 +56,7 @@ docker run --gpus all \
             --rm \
             -it \
             --shm-size=12gb \
-            docker.io/liyouzhou/splat_gym:latest
+            ghcr.io/splatlearn/splatgym:main
 ```
 
 To build image from scratch, run the following command at the root of this repository:
