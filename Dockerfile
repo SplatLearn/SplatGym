@@ -9,7 +9,8 @@ RUN apt-get update && apt-get install -y \
     python3 python3-pip git build-essential \
     cmake libpcl-dev liboctomap-dev \
     libeigen3-dev pybind11-dev libfcl-dev \
-    libccd-dev swig && \
+    libccd-dev swig \
+    curl wget && \
     apt-get clean
 
 # Build the collision detector
