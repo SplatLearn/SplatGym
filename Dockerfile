@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     cmake libpcl-dev liboctomap-dev \
     libeigen3-dev pybind11-dev libfcl-dev \
     libccd-dev swig && \
+    curl wget && \
     apt-get clean
 
 # Build the collision detector
