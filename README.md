@@ -124,13 +124,14 @@ You can find a paper writeup of the framework on [arXiv](https://arxiv.org/abs/2
 If you use this library or find the documentation useful for your research, please consider citing:
 
 ```
-@misc{zhou2024roboticlearningbackyardneural,
-      title={Robotic Learning in your Backyard: A Neural Simulator from Open Source Components}, 
-      author={Liyou Zhou and Oleg Sinavski and Athanasios Polydoros},
-      year={2024},
-      eprint={2410.19564},
-      archivePrefix={arXiv},
-      primaryClass={cs.RO},
-      url={https://arxiv.org/abs/2410.19564}, 
-}
+@INPROCEEDINGS{10817965,
+  author={Zhou, Liyou and Sinavski, Oleg and Polydoros, Athanasios},
+  booktitle={2024 Eighth IEEE International Conference on Robotic Computing (IRC)}, 
+  title={Robotic Learning in your Backyard: A Neural Simulator from Open Source Components}, 
+  year={2024},
+  volume={},
+  number={},
+  pages={131-138},
+  keywords={Training;Visualization;Solid modeling;Three-dimensional displays;Navigation;Virtual environments;Reinforcement learning;Collision avoidance;Software tools;Robots;Vi-sual Navigation},
+  doi={10.1109/IRC63610.2024.00031}}
 ```
